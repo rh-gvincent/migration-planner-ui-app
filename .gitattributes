@@ -1,0 +1,25 @@
+# Merge strategy for environment-specific files
+#
+# When rebasing dev branches (e.g., internal) on release branches,
+# the 'merge=ours' strategy automatically keeps the dev branch's version
+# of these files during conflicts.
+#
+# This is used by .github/workflows/rebase-dev-on-release.yml
+#
+# NOTE: This file should ONLY exist on the internal branch, not on master/release branches
+#
+# Dev branch keeps its own environment-specific configuration
+fec.config.js merge=ours
+src/routing/Routes.ts merge=ours
+package.json merge=ours
+deploy/frontend.yaml merge=ours
+renovate.json merge=ours
+src/data/stores/VersionsStore.ts merge=ours
+Makefile merge=ours
+
+# Internal-only Tekton pipelines
+.tekton/migration-planner-ui-dev-pull-request.yaml merge=ours
+.tekton/migration-planner-ui-dev-push.yaml merge=ours
+
+# This file itself should stay on internal branch only
+.gitattributes merge=ours

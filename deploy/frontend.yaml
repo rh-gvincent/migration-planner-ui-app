@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: Template
 metadata:
-  name: migration-advisor
+  name: migration-advisor-dev-app
 objects:
   - apiVersion: cloud.redhat.com/v1alpha1
     kind: Frontend
     metadata:
-      name: migration-advisor
+      name: migration-advisor-dev-app
     spec:
       API:
         versions:
@@ -17,19 +17,15 @@ objects:
       deploymentRepo: https://gitlab.cee.redhat.com/assisted-migration/migration-assessment-app
       frontend:
         paths:
-          - /apps/migration-advisor
+          - /apps/migration-advisor-dev-app
       image: ${IMAGE}:${IMAGE_TAG}
       module:
-        manifestLocation: "/apps/migration-advisor/fed-mods.json"
+        manifestLocation: "/apps/migration-advisor-dev-app/fed-mods.json"
         modules:
           - id: "migration-advisor"
             module: "./RootApp"
             routes:
-              - pathname: /openshift/migration-advisor
-          - id: "migration-assessment"
-            module: "./RootApp"
-            routes:
-              - pathname: /openshift/migration-assessment
+              - pathname: /openshift/migration-advisor-dev
       feoConfigEnabled: true
       searchEntries:
         - id: migration-advisor-assessments
