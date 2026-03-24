@@ -9,7 +9,7 @@ assert(
 
 /** @type {import('@redhat-cloud-services/frontend-components-config').FecWebpackConfiguration} */
 module.exports = {
-  appUrl: "/openshift/migration-advisor",
+  appUrl: "/openshift/migration-advisor-dev",
   debug: true,
   useProxy: true,
   proxyVerbose: true,
@@ -34,7 +34,7 @@ module.exports = {
       // Must match appUrl in this file. In standalone (Vite) mode this is
       // defined as "" in dev/vite.config.ts.
       "process.env.MIGRATION_PLANNER_APP_BASENAME": JSON.stringify(
-        "/openshift/migration-advisor",
+        "/openshift/migration-advisor-dev",
       ),
     }),
     // Prevent ENOSPC / EMFILE by excluding node_modules from webpack's

@@ -2,8 +2,7 @@
  * Known app slugs used by the Console Chrome to mount this microfrontend.
  * Both serve the same RootApp module (see deploy/frontend.yaml).
  */
-const APP_SLUG = "/openshift/migration-advisor";
-const LEGACY_APP_SLUG = "/openshift/migration-assessment";
+const APP_SLUG = "/openshift/migration-advisor-dev";
 
 /**
  * Compute the mount-path prefix once and cache it.
@@ -46,8 +45,6 @@ function getAppBasename(): string {
   try {
     const pathname = window.location.pathname.replace(/^\/(preview|beta)/, "");
     if (pathname.startsWith(APP_SLUG)) return (_cachedBasename = APP_SLUG);
-    if (pathname.startsWith(LEGACY_APP_SLUG))
-      return (_cachedBasename = LEGACY_APP_SLUG);
   } catch {
     // SSR / test environment without window
   }
