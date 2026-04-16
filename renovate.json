@@ -2,15 +2,5 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Renovate configuration for migration-planner-ui-app - runs dependency updates weekly on Saturday mornings",
   "extends": ["config:recommended"],
-  "schedule": ["before 6am on Saturday"],
-  "packageRules": [
-    {
-      "matchPackageNames": ["axios"],
-      "ignoreVersions": ["0.30.4", "1.14.1"]
-    },
-    {
-      "matchPackageNames": ["plain-crypto-js"],
-      "enabled": false
-    }
-  ]
+  "schedule": ["before 6am on Saturday"]
 }
