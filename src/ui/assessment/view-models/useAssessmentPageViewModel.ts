@@ -241,7 +241,7 @@ export const useAssessmentPageViewModel = (): AssessmentPageViewModel => {
   const [navigationState, navigateToReport] = useAsyncFn(
     async (assessmentId: string) => {
       try {
-        await assessmentsStore.list();
+        await assessmentsStore.get(assessmentId);
         void navigate(routes.assessmentReport(assessmentId));
       } finally {
         isNavigatingRef.current = false;

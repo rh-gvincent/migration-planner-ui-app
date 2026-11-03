@@ -25,6 +25,7 @@ let mockAccountStore: {
 
 let mockAssessmentsStore: {
   list: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
   subscribe: ReturnType<typeof vi.fn>;
@@ -100,6 +101,7 @@ describe("useAssessmentPageViewModel", () => {
 
     mockAssessmentsStore = {
       list: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue({}),
       update: vi.fn().mockResolvedValue({}),
       remove: vi.fn().mockResolvedValue({}),
       subscribe: vi.fn((_fn: () => void) => {
@@ -334,13 +336,13 @@ describe("useAssessmentPageViewModel", () => {
           assessmentId: "a-42",
         }),
       });
-      // Wait for list() promise to resolve
+      // Wait for get() promise to resolve
       await Promise.resolve();
     });
 
     expect(mockJobsStore.stopPolling).toHaveBeenCalled();
     expect(mockJobsStore.reset).toHaveBeenCalled();
-    expect(mockAssessmentsStore.list).toHaveBeenCalled();
+    expect(mockAssessmentsStore.get).toHaveBeenCalledWith("a-42");
     expect(mockNavigate).toHaveBeenCalledWith("/assessments/a-42/report");
   });
 

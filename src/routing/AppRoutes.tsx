@@ -16,8 +16,9 @@ import { ToolsScreen } from "../ui/tools/views/ToolsScreen";
 import { IdentityWrapper } from "./IdentityWrapper";
 import { routes } from "./Routes";
 
-const Report = lazy(
-  () => import(/* webpackChunkName: "Report" */ "../ui/report/views/Report"),
+const ReportPage = lazy(
+  () =>
+    import(/* webpackChunkName: "Report" */ "../ui/report/views/ReportPage"),
 );
 
 const ManualEnvironmentWizardPage = lazy(
@@ -109,7 +110,7 @@ export const AppRoutes: React.FC = () => (
         path="assessments/:id/report/manual-details"
         element={<ManualEnvironmentWizardPage />}
       />
-      <Route path="assessments/:id/report" element={<Report />} />
+      <Route path="assessments/:id/report" element={<ReportPage />} />
       <Route path="assessments/example-report" element={<ExampleReport />} />
       <Route
         path="assessments/discovery-ova-example-report"

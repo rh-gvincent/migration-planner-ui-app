@@ -18,7 +18,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAsyncFn, useMount } from "react-use";
+import { useAsyncFn } from "react-use";
 
 import { Symbols } from "../../../config/Dependencies";
 import type { IAssessmentsStore } from "../../../data/stores/interfaces/IAssessmentsStore";
@@ -430,9 +430,9 @@ export const useReportPageViewModel = (): ReportPageViewModel => {
     await Promise.all([assessmentsStore.list(), sourcesPromise]);
   }, [assessmentsStore, sourcesStore, id]);
 
-  useMount(() => {
+  useEffect(() => {
     void doFetchData();
-  });
+  }, [doFetchData]);
 
   // ---- Assessment lookup ---------------------------------------------------
   const assessment = useMemo(
@@ -759,7 +759,7 @@ export const useReportPageViewModel = (): ReportPageViewModel => {
   const [rvtoolsNavigationState, navigateToReport] = useAsyncFn(
     async (assessmentId: string) => {
       try {
-        await assessmentsStore.list();
+        await assessmentsStore.get(assessmentId);
         setIsRvtoolsModalOpen(false);
         void navigate(routes.assessmentReport(assessmentId));
       } finally {

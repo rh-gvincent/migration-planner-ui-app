@@ -303,6 +303,28 @@ describe("useReportPageViewModel", () => {
     expect(mockSourcesStore.list).toHaveBeenCalled();
   });
 
+  it("refetches when the route assessment id changes", () => {
+    mockRouteId = "assessment-1";
+    const assessmentOne = createAssessment("assessment-1");
+    mockAssessmentsStore.getSnapshot.mockReturnValue([assessmentOne]);
+    mockAssessmentsStore.get.mockClear();
+
+    const { rerender } = renderHook(() => useReportPageViewModel());
+    expect(mockAssessmentsStore.get).toHaveBeenCalledWith("assessment-1");
+
+    mockRouteId = "assessment-2";
+    const assessmentTwo = createAssessment("assessment-2");
+    mockAssessmentsStore.getSnapshot.mockReturnValue([
+      assessmentOne,
+      assessmentTwo,
+    ]);
+    mockAssessmentsStore.get.mockClear();
+
+    rerender();
+
+    expect(mockAssessmentsStore.get).toHaveBeenCalledWith("assessment-2");
+  });
+
   it("resolves source from the assessment's sourceId", () => {
     const assessment = createAssessment("assessment-1");
     mockAssessmentsStore.getSnapshot.mockReturnValue([assessment]);
