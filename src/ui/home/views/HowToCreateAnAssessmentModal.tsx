@@ -1,5 +1,4 @@
 import {
-  Content,
   Modal,
   ModalBody,
   ModalHeader,
@@ -10,12 +9,8 @@ import {
 } from "@patternfly/react-core";
 import React, { useState } from "react";
 
+import { type Step, StepList } from "../../core/components/Step";
 import OvaSetupInstructionsPopover from "./OvaSetupInstructionsPopover";
-
-type Step = {
-  title: string;
-  description: React.ReactNode;
-};
 
 const discoverySteps: Step[] = [
   {
@@ -82,17 +77,6 @@ const rvtoolsSteps: Step[] = [
       "Open the assessment from the RVTools assessments tab to review the report.",
   },
 ];
-
-const StepList: React.FC<{ steps: Step[] }> = ({ steps }) => (
-  <Content component="ol">
-    {steps.map((step) => (
-      <Content component="li" key={step.title}>
-        <strong>{step.title}</strong>
-        <Content component="p">{step.description}</Content>
-      </Content>
-    ))}
-  </Content>
-);
 
 type HowToCreateAnAssessmentModalProps = {
   isOpen: boolean;

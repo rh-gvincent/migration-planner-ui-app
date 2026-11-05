@@ -86,7 +86,7 @@ describe("EnvironmentModal - Create mode", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Add Environment" }),
+      screen.getByRole("heading", { name: "Generate discovery appliance" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Appliance version")).toBeInTheDocument();
     expect(screen.getByText("v0.13.6")).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe("EnvironmentModal - Create mode", () => {
     );
 
     expect(
-      screen.queryByRole("heading", { name: "Add Environment" }),
+      screen.queryByRole("heading", { name: "Generate discovery appliance" }),
     ).not.toBeInTheDocument();
   });
 
@@ -308,7 +308,7 @@ describe("EnvironmentModal - Edit mode", () => {
       </EnvironmentPageProvider>,
     );
 
-    const nameInput = screen.getByLabelText(/^Name/);
+    const nameInput = screen.getByLabelText(/^Discovery appliance name/);
     expect(nameInput).toHaveValue("Test Environment");
     expect(nameInput).toBeDisabled(); // Name is disabled in edit mode
   });

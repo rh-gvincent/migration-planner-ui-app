@@ -267,11 +267,10 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
         <TextInputFormGroup
           id="environmentName"
           name="environmentName"
-          label="Name"
+          label="Discovery appliance name"
           placeholder="Example: ams-vcenter-prod-1"
           isRequired
           isDisabled={!!formValues}
-          helpText="Name your environment."
         />
 
         <TextAreaFormGroup
@@ -279,7 +278,7 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
           name="sshKey"
           label="SSH Key"
           placeholder="Example: ssh-rsa AAAAB3NzaC1yc2E..."
-          helpText="Paste the content of a public ssh key you want to connect to your discovery VM."
+          helpText="Paste the content of a public SSH key you want to use to connect to the discovery appliance."
         />
 
         <CheckboxFormGroup

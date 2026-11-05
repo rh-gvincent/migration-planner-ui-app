@@ -18,6 +18,7 @@ import {
   getModalMode,
   type ModalMode,
 } from "./helpers/environmentModalHelpers";
+import { MigrationAssessmentStepsHelpButton } from "./MigrationAssessmentStepsHelpButton";
 
 type CreateModeProps = {
   sourceId?: never;
@@ -127,16 +128,21 @@ export const EnvironmentModal: React.FC<EnvironmentModalProps> = (props) => {
 
   const modalConfig = {
     create: {
-      title: "Add Environment",
-      description:
-        "To add a new environment, create a discovery OVA image. Then, download and import the OVA file into your VMware environment.",
+      title: "Generate discovery appliance",
+      description: (
+        <>
+          Generate a discovery OVA for a new appliance. Download and import the
+          OVA into vCenter to deploy it. <MigrationAssessmentStepsHelpButton />
+        </>
+      ),
+
       submitText: "Generate OVA",
       formId: "create-environment-form",
       ouiaId: "CreateEnvironmentModal",
       ariaLabelledBy: "create-environment-modal-title",
       ariaDescribedBy: "modal-box-body-create-environment",
       errorFlag: vm.errorDownloadingSource,
-      errorTitle: "Add Environment error",
+      errorTitle: "Generate discovery appliance error",
     },
     edit: {
       title: "Update Environment",
