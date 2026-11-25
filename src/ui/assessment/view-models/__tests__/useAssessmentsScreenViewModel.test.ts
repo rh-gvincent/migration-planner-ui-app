@@ -1,62 +1,68 @@
-import type { Assessment } from "@openshift-migration-advisor/planner-sdk";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
+import type { Identity, Job } from "@openshift-migration-advisor/planner-sdk";
+import { JobStatus } from "@openshift-migration-advisor/planner-sdk";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_POLLING_DELAY } from "../../../../lib/mvvm/PollableStore";
-import {
-  type AssessmentModel,
-  createAssessmentModel,
-} from "../../../../models/AssessmentModel";
+import type { JobsStoreState } from "../../../../data/stores/JobsStore";
 import { useAssessmentsScreenViewModel } from "../useAssessmentsScreenViewModel";
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
+const mockNavigate = vi.fn();
+
 vi.mock("react-router-dom", () => ({
-  useOutletContext: () => ({ rvtoolsOpenToken: "some-token" }),
+  useNavigate: () => mockNavigate,
 }));
 
-vi.mock("react-use", async () => {
-  const actual = await vi.importActual<typeof import("react-use")>("react-use");
-  return {
-    ...actual,
-    useMount: (fn: () => void) => {
-      useEffect(
-        () => {
-          fn();
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- useMount runs once on mount
-        [],
-      );
-    },
-    useUnmount: (fn: () => void) => {
-      useEffect(
-        () => () => fn(),
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- useUnmount runs cleanup only on unmount
-        [],
-      );
-    },
-  };
-});
+// Mock stores that will be injected
+let mockAccountStore: {
+  getIdentity: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  getSnapshot: ReturnType<typeof vi.fn>;
+};
 
 let mockAssessmentsStore: {
-  hasLoaded: boolean;
   list: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  getSnapshot: ReturnType<typeof vi.fn>;
+};
+
+let mockJobsStore: {
+  createRVToolsJob: ReturnType<typeof vi.fn>;
+  appendRvtoolsToAssessment: ReturnType<typeof vi.fn>;
+  cancelRVToolsJob: ReturnType<typeof vi.fn>;
+  clearCreateError: ReturnType<typeof vi.fn>;
+  clearRvtoolsUploadResults: ReturnType<typeof vi.fn>;
+  removeRvtoolsUploadResult: ReturnType<typeof vi.fn>;
+  reset: ReturnType<typeof vi.fn>;
   startPolling: ReturnType<typeof vi.fn>;
   stopPolling: ReturnType<typeof vi.fn>;
   subscribe: ReturnType<typeof vi.fn>;
   getSnapshot: ReturnType<typeof vi.fn>;
 };
 
-let assessmentsData: AssessmentModel[];
-let assessmentsListeners: Set<() => void>;
+let mockRvtoolsReportPersistenceStore: {
+  applyUploadOutcome: ReturnType<typeof vi.fn>;
+};
+
+let jobsStoreState: JobsStoreState;
+let jobsListeners: Set<() => void>;
+let accountStoreState: Identity | null;
 
 vi.mock("@openshift-migration-advisor/ioc", () => ({
   useInjection: (symbol: symbol) => {
     const key = symbol.description;
+    if (key === "AccountStore") return mockAccountStore;
     if (key === "AssessmentsStore") return mockAssessmentsStore;
+    if (key === "JobsStore") return mockJobsStore;
+    if (key === "RvtoolsReportPersistenceStore") {
+      return mockRvtoolsReportPersistenceStore;
+    }
     throw new Error(`Unexpected symbol: ${String(symbol)}`);
   },
 }));
@@ -65,17 +71,17 @@ vi.mock("@openshift-migration-advisor/ioc", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeAssessment = (overrides: Partial<Assessment> = {}): AssessmentModel =>
-  createAssessmentModel({
-    id: "a-1",
-    name: "Test",
-    snapshots: [],
-    ...overrides,
-  } as Assessment);
+const makeJob = (overrides: Partial<Job> = {}): Job => ({
+  id: 1,
+  status: JobStatus.Pending,
+  assessmentId: undefined,
+  ...overrides,
+});
 
-const setAssessmentsData = (data: AssessmentModel[]): void => {
-  assessmentsData = data;
-  assessmentsListeners.forEach((fn) => fn());
+const setJobsState = (partial: Partial<JobsStoreState>): void => {
+  jobsStoreState = { ...jobsStoreState, ...partial };
+  // Notify all subscribers (triggers useSyncExternalStore update)
+  jobsListeners.forEach((fn) => fn());
 };
 
 // ---------------------------------------------------------------------------
@@ -85,107 +91,108 @@ const setAssessmentsData = (data: AssessmentModel[]): void => {
 describe("useAssessmentsScreenViewModel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    assessmentsData = [];
-    assessmentsListeners = new Set();
+
+    accountStoreState = null;
+    jobsStoreState = {
+      currentJob: null,
+      isCreating: false,
+      createError: undefined,
+    };
+    jobsListeners = new Set();
+
+    mockAccountStore = {
+      getIdentity: vi.fn().mockResolvedValue(null),
+      subscribe: vi.fn((_fn: () => void) => {
+        // no-op for account store in these tests
+        return () => {};
+      }),
+      getSnapshot: vi.fn(() => accountStoreState),
+    };
 
     mockAssessmentsStore = {
-      hasLoaded: false,
       list: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue({}),
+      update: vi.fn().mockResolvedValue({}),
+      remove: vi.fn().mockResolvedValue({}),
+      subscribe: vi.fn((_fn: () => void) => {
+        // no-op for assessments store in these tests
+        return () => {};
+      }),
+      getSnapshot: vi.fn(() => []),
+    };
+
+    mockRvtoolsReportPersistenceStore = {
+      applyUploadOutcome: vi.fn(),
+    };
+
+    mockJobsStore = {
+      createRVToolsJob: vi.fn().mockResolvedValue(makeJob()),
+      appendRvtoolsToAssessment: vi.fn().mockResolvedValue(makeJob()),
+      cancelRVToolsJob: vi.fn().mockResolvedValue(null),
+      clearCreateError: vi.fn(),
+      clearRvtoolsUploadResults: vi.fn(),
+      removeRvtoolsUploadResult: vi.fn(),
+      reset: vi.fn(),
       startPolling: vi.fn(),
       stopPolling: vi.fn(),
-      subscribe: vi.fn((listener: () => void) => {
-        assessmentsListeners.add(listener);
-        return () => assessmentsListeners.delete(listener);
+      subscribe: vi.fn((fn: () => void) => {
+        jobsListeners.add(fn);
+        return () => {
+          jobsListeners.delete(fn);
+        };
       }),
-      getSnapshot: vi.fn(() => assessmentsData),
+      getSnapshot: vi.fn(() => jobsStoreState),
     };
   });
 
-  it("returns file-upload assessments from the store snapshot", async () => {
-    const rvtools = makeAssessment({
-      id: "a-1",
-      name: "RVTools Assessment",
-      sourceType: "rvtools",
-    });
-    const discovery = makeAssessment({
-      id: "a-2",
-      name: "Discovery Assessment",
-      sourceType: "source",
-    });
+  // -- updateAssessment -----------------------------------------------------
+
+  it("delegates updateAssessment to the AssessmentsStore", async () => {
     const { result } = renderHook(() => useAssessmentsScreenViewModel());
 
     await act(async () => {
-      setAssessmentsData([rvtools, discovery]);
-      await Promise.resolve();
+      await result.current.updateAssessment("a-1", "New Name");
     });
 
-    expect(result.current.assessments).toEqual([rvtools]);
-  });
-
-  it("calls list() on mount", async () => {
-    renderHook(() => useAssessmentsScreenViewModel());
-    await act(async () => {
-      await Promise.resolve();
+    expect(mockAssessmentsStore.update).toHaveBeenCalledWith("a-1", {
+      name: "New Name",
     });
-    expect(mockAssessmentsStore.list).toHaveBeenCalledTimes(1);
   });
 
-  it("starts polling with DEFAULT_POLLING_DELAY on mount", async () => {
-    renderHook(() => useAssessmentsScreenViewModel());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockAssessmentsStore.startPolling).toHaveBeenCalledWith(
-      DEFAULT_POLLING_DELAY,
-    );
-  });
+  // -- deleteAssessment -----------------------------------------------------
 
-  it("stops polling on unmount", () => {
-    const { unmount } = renderHook(() => useAssessmentsScreenViewModel());
-    expect(mockAssessmentsStore.stopPolling).not.toHaveBeenCalled();
-
-    unmount();
-
-    expect(mockAssessmentsStore.stopPolling).toHaveBeenCalled();
-  });
-
-  it("returns rvtoolsOpenToken from outlet context", async () => {
+  it("delegates deleteAssessment to the AssessmentsStore", async () => {
     const { result } = renderHook(() => useAssessmentsScreenViewModel());
+
     await act(async () => {
-      await Promise.resolve();
+      await result.current.deleteAssessment("a-1");
     });
-    expect(result.current.rvtoolsOpenToken).toBe("some-token");
+
+    expect(mockAssessmentsStore.remove).toHaveBeenCalledWith("a-1");
   });
 
-  it("isLoading is true while list() is pending", async () => {
-    let resolveList!: () => void;
-    mockAssessmentsStore.list.mockReturnValue(
+  it("tracks isDeletingAssessment loading state", async () => {
+    let resolveDelete!: () => void;
+    mockAssessmentsStore.remove.mockReturnValue(
       new Promise<void>((resolve) => {
-        resolveList = resolve;
+        resolveDelete = resolve;
       }),
     );
 
     const { result } = renderHook(() => useAssessmentsScreenViewModel());
 
-    expect(result.current.isLoading).toBe(true);
+    let deletePromise: Promise<void>;
+    act(() => {
+      deletePromise = result.current.deleteAssessment("a-1");
+    });
+
+    expect(result.current.isDeletingAssessment).toBe(true);
 
     await act(async () => {
-      resolveList();
-      await Promise.resolve();
+      resolveDelete();
+      await deletePromise!;
     });
 
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it("hasInitialLoad becomes true after first list() completes", async () => {
-    mockAssessmentsStore.list.mockResolvedValue([]);
-
-    const { result } = renderHook(() => useAssessmentsScreenViewModel());
-
-    expect(result.current.hasInitialLoad).toBe(false);
-
-    await waitFor(() => {
-      expect(result.current.hasInitialLoad).toBe(true);
-    });
+    expect(result.current.isDeletingAssessment).toBe(false);
   });
 });

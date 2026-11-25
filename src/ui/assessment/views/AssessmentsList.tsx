@@ -6,11 +6,7 @@ import {
   getAssessmentDataCollectedMs,
   getAssessmentImportedMs,
 } from "../../../models/assessmentTimestamps";
-import {
-  type AssessmentSourceFilterKey,
-  getAssessmentSourceLabel,
-  sourceMatchesAssessmentSourceFilter,
-} from "../helpers/assessmentSource";
+import { getAssessmentSourceLabel } from "../helpers/assessmentSource";
 import {
   AssessmentsTable,
   type AssessmentTableRow,
@@ -22,10 +18,10 @@ import {
 
 type AssessmentsListProps = {
   assessments: AssessmentModel[];
-  search?: string;
+  nameFilter?: string;
   filterBy?: string;
   filterValue?: string;
-  selectedSources?: AssessmentSourceFilterKey[];
+  selectedSources?: string[];
   selectedOwners?: string[];
   sortBy?: { columnKey: SortableColumn; direction: "asc" | "desc" } | undefined;
   onSort?: (
@@ -42,7 +38,7 @@ type AssessmentsListProps = {
 
 export const AssessmentsList: React.FC<AssessmentsListProps> = ({
   assessments,
-  search: _search = "",
+  nameFilter = "",
   filterBy = "Filter",
   filterValue = "",
   selectedSources = [],
@@ -61,6 +57,7 @@ export const AssessmentsList: React.FC<AssessmentsListProps> = ({
       const id = String(assessment.id ?? "");
       const sourceType = assessment.sourceType || "Unknown";
       const source = getAssessmentSourceLabel(sourceType);
+      const sourceId = assessment.sourceId;
       const permissions = Array.isArray(assessment.permissions)
         ? assessment.permissions
         : [];
@@ -80,6 +77,7 @@ export const AssessmentsList: React.FC<AssessmentsListProps> = ({
         id,
         name,
         source,
+        sourceId,
         sourceType,
         dataCollectedMs,
         importedMs,
@@ -97,9 +95,9 @@ export const AssessmentsList: React.FC<AssessmentsListProps> = ({
 
     let filtered = items;
 
-    // Apply name-only search
-    if (_search && _search.trim() !== "") {
-      const query = _search.toLowerCase();
+    // Apply name filter
+    if (nameFilter && nameFilter.trim() !== "") {
+      const query = nameFilter.toLowerCase();
       filtered = filtered.filter((i) =>
         (i.name || "").toLowerCase().includes(query),
       );
@@ -237,18 +235,16 @@ export const AssessmentsList: React.FC<AssessmentsListProps> = ({
       }
     }
 
-    if (selectedSources.length > 0) {
-      filtered = filtered.filter((i) =>
-        selectedSources.some((key) =>
-          sourceMatchesAssessmentSourceFilter(i.sourceType, key),
-        ),
-      );
-    }
-
     // Apply owners multi-select filter
     if (selectedOwners && selectedOwners.length > 0) {
       filtered = filtered.filter((i) =>
         i.owner ? selectedOwners.includes(i.owner) : false,
+      );
+    }
+
+    if (selectedSources.length > 0) {
+      filtered = filtered.filter((item) =>
+        item.sourceId !== undefined && selectedSources.includes(item.sourceId),
       );
     }
 
@@ -329,7 +325,7 @@ export const AssessmentsList: React.FC<AssessmentsListProps> = ({
     return copy;
   }, [
     assessments,
-    _search,
+    nameFilter,
     filterBy,
     filterValue,
     selectedSources,

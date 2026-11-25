@@ -11,16 +11,18 @@ import {
   selectAttribute,
   selectCheckboxOption,
 } from "../../../core/components/attribute-value-filter/__tests__/filterTestHelpers";
-import type { useAssessmentPageViewModel } from "../../view-models/useAssessmentPageViewModel";
-import { AssessmentsPage } from "../AssessmentsPage";
+import type { useAssessmentsScreenViewModel } from "../../view-models/useAssessmentsScreenViewModel";
+import { AssessmentsScreen } from "../AssessmentsScreen";
 import { DEFAULT_VISIBLE_COLUMNS } from "../AssessmentsTable";
 
-type AssessmentPageViewModel = ReturnType<typeof useAssessmentPageViewModel>;
+type AssessmentsScreenViewModel = ReturnType<
+  typeof useAssessmentsScreenViewModel
+>;
 
-let mockViewModel: AssessmentPageViewModel;
+let mockViewModel: AssessmentsScreenViewModel;
 
-vi.mock("../../view-models/useAssessmentPageViewModel", () => ({
-  useAssessmentPageViewModel: () => mockViewModel,
+vi.mock("../../view-models/useAssessmentsScreenViewModel", () => ({
+  useAssessmentsScreenViewModel: () => mockViewModel,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -58,41 +60,23 @@ const makeAssessment = (overrides: Partial<Assessment> = {}) =>
   });
 
 const makeViewModel = (
-  overrides: Partial<AssessmentPageViewModel> = {},
-): AssessmentPageViewModel => ({
-  identity: null,
-  currentJob: null,
-  isCreatingJob: false,
-  jobCreateError: undefined,
-  isJobProcessing: false,
-  jobProgressValue: 0,
-  jobProgressLabel: "",
-  jobError: null,
-  isNavigatingToReport: false,
-  isDeletingAssessment: false,
-  deleteError: undefined,
+  overrides: Partial<AssessmentsScreenViewModel> = {},
+): AssessmentsScreenViewModel => ({
+  assessments: [],
   isUpdatingAssessment: false,
-  updateError: undefined,
+  isDeletingAssessment: false,
   isColumnModalOpen: false,
   setIsColumnModalOpen: vi.fn(),
   visibleColumns: DEFAULT_VISIBLE_COLUMNS,
   setVisibleColumns: vi.fn(),
   sortBy: undefined,
   setSortBy: vi.fn(),
-  createRVToolsJob: vi.fn(),
-  clearJobCreateError: vi.fn(),
-  clearRvtoolsUploadResults: vi.fn(),
-  removeRvtoolsUploadResult: vi.fn(),
-  completePartialRvtoolsUpload: vi.fn().mockResolvedValue(undefined),
-  cancelRVToolsJob: vi.fn(),
   updateAssessment: vi.fn(),
   deleteAssessment: vi.fn(),
   shareAssessment: vi.fn(),
   isSharingAssessment: false,
-  shareError: undefined,
   unshareAssessment: vi.fn(),
   isUnsharingAssessment: false,
-  unshareError: undefined,
   ...overrides,
 });
 
@@ -121,19 +105,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("AssessmentsPage Source column", () => {
+describe("AssessmentsScreen Source column", () => {
   it("shows Uploaded file for rvtools and inventory assessments", () => {
-    render(<AssessmentsPage assessments={assessments} />);
+    render(<AssessmentsScreen />);
 
     const table = screen.getByRole("grid", { name: "Assessments table" });
     expect(within(table).getAllByText("Uploaded file")).toHaveLength(3);
   });
 });
 
-describe("AssessmentsPage filters", () => {
+describe("AssessmentsScreen filters", () => {
   it("filters assessments by name", async () => {
     const user = userEvent.setup();
-    render(<AssessmentsPage assessments={assessments} />);
+    render(<AssessmentsScreen />);
 
     await user.type(
       screen.getByRole("textbox", { name: "Filter by name" }),
@@ -147,7 +131,7 @@ describe("AssessmentsPage filters", () => {
 
   it("filters assessments by owner", async () => {
     const user = userEvent.setup();
-    render(<AssessmentsPage assessments={assessments} />);
+    render(<AssessmentsScreen />);
 
     await selectAttribute(user, "Owner");
     await user.click(screen.getByRole("button", { name: "Filter by owner" }));
@@ -160,7 +144,7 @@ describe("AssessmentsPage filters", () => {
 
   it("clears all filters from the toolbar action", async () => {
     const user = userEvent.setup();
-    render(<AssessmentsPage assessments={assessments} />);
+    render(<AssessmentsScreen />);
 
     await user.type(
       screen.getByRole("textbox", { name: "Filter by name" }),
@@ -177,7 +161,7 @@ describe("AssessmentsPage filters", () => {
 
   it("switches the visible value control when the active attribute changes", async () => {
     const user = userEvent.setup();
-    render(<AssessmentsPage assessments={assessments} />);
+    render(<AssessmentsScreen />);
 
     expect(
       screen.getByRole("textbox", { name: "Filter by name" }),
@@ -194,7 +178,7 @@ describe("AssessmentsPage filters", () => {
   });
 });
 
-describe("AssessmentsPage sharing actions", () => {
+describe("AssessmentsScreen sharing actions", () => {
   const openKebab = async (
     user: ReturnType<typeof userEvent.setup>,
   ): Promise<void> => {
@@ -203,11 +187,7 @@ describe("AssessmentsPage sharing actions", () => {
 
   it("shows 'Share assessment' in the kebab for a non-shared assessment", async () => {
     const user = userEvent.setup();
-    render(
-      <AssessmentsPage
-        assessments={[makeAssessment({ id: "a-1", name: "Alpha Discovery" })]}
-      />,
-    );
+    render(<AssessmentsScreen />);
 
     await openKebab(user);
 
@@ -221,17 +201,7 @@ describe("AssessmentsPage sharing actions", () => {
 
   it("shows 'Unshare assessment' instead of 'Share assessment' when already shared", async () => {
     const user = userEvent.setup();
-    render(
-      <AssessmentsPage
-        assessments={[
-          makeAssessment({
-            id: "a-1",
-            name: "Alpha Discovery",
-            sharing: { isShared: true, sharedWith: [] },
-          }),
-        ]}
-      />,
-    );
+    render(<AssessmentsScreen />);
 
     await openKebab(user);
 
@@ -247,11 +217,7 @@ describe("AssessmentsPage sharing actions", () => {
     const user = userEvent.setup();
     const shareAssessment = vi.fn();
     mockViewModel = makeViewModel({ shareAssessment });
-    render(
-      <AssessmentsPage
-        assessments={[makeAssessment({ id: "a-1", name: "Alpha Discovery" })]}
-      />,
-    );
+    render(<AssessmentsScreen />);
 
     await openKebab(user);
     await user.click(
@@ -266,17 +232,7 @@ describe("AssessmentsPage sharing actions", () => {
     const user = userEvent.setup();
     const unshareAssessment = vi.fn();
     mockViewModel = makeViewModel({ unshareAssessment });
-    render(
-      <AssessmentsPage
-        assessments={[
-          makeAssessment({
-            id: "a-1",
-            name: "Alpha Discovery",
-            sharing: { isShared: true, sharedWith: [] },
-          }),
-        ]}
-      />,
-    );
+    render(<AssessmentsScreen />);
 
     await openKebab(user);
     await user.click(

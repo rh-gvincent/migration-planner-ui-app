@@ -245,12 +245,6 @@ export interface ReportPageViewModel {
   // Route param
   assessmentId: string | undefined;
 
-  // Breadcrumb parent for returning to the assessment's source section.
-  assessmentBreadcrumbParent?: {
-    to: string;
-    label: string;
-  };
-
   // Data (reactive from stores)
   assessment: AssessmentLike | undefined;
   source: SourceModel | undefined;
@@ -462,12 +456,6 @@ export const useReportPageViewModel = (): ReportPageViewModel => {
       assessments?.find((a: AssessmentModel) => String(a.id) === String(id)),
     [assessments, id],
   );
-
-  const assessmentBreadcrumbParent =
-    assessment?.sourceType != null &&
-    !isUploadedFileSourceType(String(assessment.sourceType))
-      ? { to: routes.environments, label: HOME_TAB_LABELS.environments }
-      : { to: routes.assessments, label: HOME_TAB_LABELS.assessments };
 
   // ---- Source lookup -------------------------------------------------------
   const source = useMemo(
@@ -909,7 +897,6 @@ export const useReportPageViewModel = (): ReportPageViewModel => {
   // ---- Return --------------------------------------------------------------
   return {
     assessmentId: id,
-    assessmentBreadcrumbParent,
 
     assessment,
     source,

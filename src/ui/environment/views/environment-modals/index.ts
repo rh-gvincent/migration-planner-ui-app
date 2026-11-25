@@ -1,5 +1,3 @@
-export type { CreateDiscoveryAssessmentModalProps } from "./CreateDiscoveryAssessmentModal";
-export { CreateDiscoveryAssessmentModal } from "./CreateDiscoveryAssessmentModal";
 export type {
   DiscoveryApplianceDownload,
   DiscoveryApplianceModalInitialState,

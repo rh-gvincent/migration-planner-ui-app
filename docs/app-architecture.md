@@ -163,7 +163,7 @@ hooks** that encapsulate all logic for a single view.
 | View model                      | Feature     | Stores consumed                                                                                                               |
 | ------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `useAssessmentsScreenViewModel` | assessment  | `AssessmentsStore` (list + polling)                                                                                           |
-| `useAssessmentPageViewModel`    | assessment  | `AssessmentsStore` (CRUD) + `JobsStore` (RVTools jobs)                                                                        |
+| `useAssessmentsScreenViewModel` | assessment  | `AssessmentsStore` (CRUD) + `JobsStore` (RVTools jobs)                                                                        |
 | `useAssessmentDetailsViewModel` | assessment  | `AssessmentsStore` + `SourcesStore` (detail view, source/agent lookup, snapshot parsing)                                      |
 | `useCreateFromOvaViewModel`     | assessment  | `AssessmentsStore` + `EnvironmentPageViewModel` (form state, draft persistence, assessment creation)                          |
 | `useEnvironmentPageViewModel`   | environment | `SourcesStore` + `AssessmentsStore` + `ImagesStore` (full CRUD, download URL flow, polling)                                   |
@@ -245,7 +245,7 @@ When a view model needs to coordinate between multiple stores, it observes
 state from both and orchestrates actions between them:
 
 ```typescript
-export const useAssessmentPageViewModel = (): AssessmentPageViewModel => {
+export const useAssessmentsScreenViewModel = (): AssessmentsScreenViewModel => {
   const assessmentsStore = useInjection<AssessmentsStore>(
     Symbols.AssessmentsStore,
   );
@@ -591,16 +591,15 @@ progressively replaced across four phases:
 
 | Phase | What was migrated                                                                                                                                                                                                                             |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `Assessment.tsx` — CRUD + RVTools job orchestration moved to `useAssessmentPageViewModel` + `JobsStore`.                                                                                                                                      |
+| 1     | `Assessment.tsx` — CRUD + RVTools job orchestration moved to `useAssessmentsScreenViewModel` + `JobsStore`.                                                                                                                                   |
 | 1     | `AssessmentsScreen.tsx` — listing + polling moved to `useAssessmentsScreenViewModel` + `AssessmentsStore`.                                                                                                                                    |
 | 2     | `Environment.tsx` + all children — source management, download URL flow, polling moved to `useEnvironmentPageViewModel` + `SourcesStore` / `ImagesStore` / `AssessmentsStore`.                                                                |
 | 2     | Provider removed from `AppRouter.tsx`. No active route consumes it.                                                                                                                                                                           |
 | 3     | `Report.tsx` + `ExampleReport.tsx` + `assessment-report/` + `cluster-sizer/` — moved from `src/pages/report/` to `src/ui/report/views/`. `useReportPageViewModel` replaces the nested `<DiscoverySourcesProvider>`. Report routes re-enabled. |
 | 4     | Provider, Context, and type definition **deleted**. Raw API client symbols removed from DI.                                                                                                                                                   |
 
-Two commented-out routes (`CreateFromOva`, `AssessmentDetails`) still contain
-stale references. When re-enabled, they must be migrated to stores + view
-models first — **do NOT recreate the Provider**.
+One commented-out routes `AssessmentDetails` still contain stale references.
+When re-enabled, they must be migrated to stores + view models first — **do NOT recreate the Provider**.
 
 ---
 

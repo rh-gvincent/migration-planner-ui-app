@@ -176,17 +176,6 @@ describe("useHomeScreenViewModel", () => {
     expect(mockNavigate).toHaveBeenCalledWith(routes.environments);
   });
 
-  it("handleOpenRVToolsModal sets rvtoolsOpenToken to true and navigates to assessments", () => {
-    const { result } = renderHook(() => useHomeScreenViewModel());
-    expect(result.current.rvtoolsOpenToken).toBe(false);
-
-    act(() => {
-      result.current.handleOpenRVToolsModal();
-    });
-    expect(result.current.rvtoolsOpenToken).toBe(true);
-    expect(mockNavigate).toHaveBeenCalledWith(routes.assessments);
-  });
-
   describe("Partner badge functionality", () => {
     it("shouldShowBadge is true when identity.kind is partner", async () => {
       const unsubscribe = vi.fn();

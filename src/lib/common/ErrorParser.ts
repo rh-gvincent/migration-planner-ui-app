@@ -44,6 +44,9 @@ export async function parseApiError(
   return new Error(fallbackMessage);
 }
 
+const duplicateAssessmentNamePattern =
+  /assessment with name\s+(["'])(.*?)\1\s+already exists/i;
+
 /**
  * Returns `true` when the error message indicates a name-related validation
  * failure from the backend (duplicate name or invalid characters).
@@ -52,7 +55,23 @@ export const isNameError = (error: Error | null): boolean => {
   if (!error) return false;
   const msg = error.message || "";
   return (
-    /assessment with name '.*' already exists/i.test(msg) ||
+    duplicateAssessmentNamePattern.test(msg) ||
     /provided name.+invalid/i.test(msg)
   );
+};
+
+/** Turns backend name errors into a message suitable for the assessment form. */
+export const getAssessmentNameErrorMessage = (
+  error: Error | null,
+): string | null => {
+  if (!error || !isNameError(error)) {
+    return null;
+  }
+
+  const duplicateName = error.message.match(duplicateAssessmentNamePattern);
+  if (duplicateName) {
+    return `The assessment with name ${duplicateName[2]} already exists.`;
+  }
+
+  return error.message;
 };

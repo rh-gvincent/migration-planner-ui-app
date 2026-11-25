@@ -7,9 +7,5 @@ import { AppShell } from "./AppShell";
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
-  createRoot(rootElement).render(
-    <React.StrictMode>
-      <AppShell />
-    </React.StrictMode>,
-  );
+  createRoot(rootElement).render(<AppShell />);
 }

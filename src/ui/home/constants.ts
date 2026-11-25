@@ -1,5 +1,5 @@
 export const HOME_TAB_LABELS = {
-  assessments: "RVTools assessments",
+  assessments: "Assessments",
   environments: "Discovery appliances",
   tools: "Tools",
 } as const;

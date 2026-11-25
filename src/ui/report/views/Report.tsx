@@ -30,9 +30,7 @@ import { Link } from "react-router-dom";
 
 import { themeTooltipFlyoutProps } from "../../../lib/patternfly/flyoutAppendTo";
 import { routes } from "../../../routing/Routes";
-import CreateRvtoolsAssessmentModal from "../../assessment/views/create-rvtools/CreateRvtoolsAssessmentModal";
 import { AppPage } from "../../core/components/AppPage";
-import CreateAssessmentDropdown from "../../core/components/CreateAssessmentDropdown";
 import { HOME_TAB_LABELS } from "../../home/constants";
 import { fromGroupOptionId } from "../helpers/groupViewModel";
 import { useReportPageViewModel } from "../view-models/useReportPageViewModel";
@@ -114,11 +112,6 @@ const ReportContent: React.FC = () => {
     ? "Export is unavailable because this assessment has no VMs with host inventory."
     : "Export is unavailable because this cluster has no VMs.";
 
-  const assessmentParentBreadcrumb = vm.assessmentBreadcrumbParent ?? {
-    to: routes.assessments,
-    label: HOME_TAB_LABELS.assessments,
-  };
-
   const hasTopPageAlerts =
     Boolean(vm.vcenterInventoryLoadError) ||
     Boolean(vm.clusterInventoryLoadError) ||
@@ -164,8 +157,8 @@ const ReportContent: React.FC = () => {
           },
           {
             key: 2,
-            to: assessmentParentBreadcrumb.to,
-            children: assessmentParentBreadcrumb.label,
+            to: routes.assessments,
+            children: HOME_TAB_LABELS.assessments,
           },
           {
             key: 3,
@@ -337,10 +330,7 @@ const ReportContent: React.FC = () => {
                       </List>
                     </StackItem>
                     <StackItem>
-                      <CreateAssessmentDropdown
-                        toggleLabel="Create a new assessment"
-                        onSelectRvtools={() => vm.openRvtoolsModal()}
-                      />
+                      <Link to={routes.assessments}>Go to assessments</Link>
                     </StackItem>
                   </Stack>
                 </Alert>
@@ -486,34 +476,6 @@ const ReportContent: React.FC = () => {
             />
           </TabContentBody>
         </TabContent>
-
-        <CreateRvtoolsAssessmentModal
-          mode={vm.rvtoolsModalMode}
-          maxFiles={
-            vm.rvtoolsModalMode === "append"
-              ? vm.rvtoolsRemainingFileSlots
-              : undefined
-          }
-          isOpen={vm.isRvtoolsModalOpen}
-          onClose={vm.closeRvtoolsModal}
-          onSubmit={({ name, files }) => {
-            if (vm.rvtoolsModalMode === "append") {
-              void vm.appendRvtoolsFiles(files);
-            } else {
-              void vm.createRVToolsJob(name, files);
-            }
-          }}
-          isLoading={vm.isCreatingJob}
-          error={vm.jobCreateError}
-          isJobProcessing={vm.isJobProcessing}
-          jobProgressValue={vm.jobProgressValue}
-          jobError={vm.jobError}
-          rvtoolsUpload={vm.rvtoolsUpload}
-          isNavigatingToReport={vm.isNavigatingToReport}
-          onStagedFileRemoved={({ fileName, fileSize }) => {
-            vm.removeRvtoolsUploadResult(fileName, fileSize);
-          }}
-        />
       </AppPage>
     </>
   );

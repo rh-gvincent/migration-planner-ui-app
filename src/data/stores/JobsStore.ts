@@ -1,7 +1,7 @@
 import type { Job, JobApi } from "@openshift-migration-advisor/planner-sdk";
 import { JobStatus } from "@openshift-migration-advisor/planner-sdk";
 
-import { parseApiError } from "../../lib/common/ErrorParser";
+import { isNameError, parseApiError } from "../../lib/common/ErrorParser";
 import { PollableStoreBase } from "../../lib/mvvm/PollableStore";
 import type { IJobsStore } from "./interfaces/IJobsStore";
 
@@ -279,6 +279,21 @@ export class JobsStore
     signal: AbortSignal,
     lastJob: Job,
   ): Promise<void> {
+    // Name validation applies to the assessment, so another file cannot fix it.
+    if (
+      this.rvtoolsFlow === "create" &&
+      isNameError(new Error(errorMessage))
+    ) {
+      this.preservePartialAssessmentIfNeeded();
+      this.clearRvtoolsUploadQueue();
+      this.setState({
+        currentJob: lastJob,
+        createError: new Error(errorMessage),
+        isCreating: false,
+      });
+      return;
+    }
+
     this.markRvtoolsFileInvalid(failedIndex, errorMessage);
     this.preservePartialAssessmentIfNeeded();
 

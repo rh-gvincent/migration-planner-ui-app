@@ -9,10 +9,6 @@ import { useIdentity } from "../../../hooks/useIdentity";
 import { routes } from "../../../routing/Routes";
 import { HOME_TAB_LABELS, PARTNER_TAB_LABELS } from "../constants";
 
-export type HomeScreenOutletContext = {
-  rvtoolsOpenToken?: string;
-};
-
 export interface HomeScreenViewModel {
   activeTabKey: number;
   breadcrumbs: Array<{
@@ -20,7 +16,6 @@ export interface HomeScreenViewModel {
     children: string;
     isActive?: boolean;
   }>;
-  rvtoolsOpenToken: boolean;
   partnerTab: {
     label: string;
     path: string;
@@ -30,7 +25,6 @@ export interface HomeScreenViewModel {
     event: React.MouseEvent<HTMLElement> | React.KeyboardEvent | MouseEvent,
     tabIndex: string | number,
   ) => void;
-  handleOpenRVToolsModal: () => void;
   pendingRequestsCount: number;
   shouldShowBadge: boolean;
   isLoadingPartnerRequests: boolean;
@@ -82,8 +76,6 @@ export const useHomeScreenViewModel = (): HomeScreenViewModel => {
   };
 
   const activeTabKey = getActiveTabKey();
-
-  const [rvtoolsOpenToken, setRvtoolsOpenToken] = useState(false);
 
   const getPartnerTabConfig = () => {
     if (!identity) return null;
@@ -167,20 +159,13 @@ export const useHomeScreenViewModel = (): HomeScreenViewModel => {
     }
   };
 
-  const handleOpenRVToolsModal = () => {
-    setRvtoolsOpenToken(true);
-    void navigate(routes.assessments); // switch to assessments tab
-  };
-
   return {
     activeTabKey,
     breadcrumbs,
-    rvtoolsOpenToken,
     partnerTab,
     pendingRequestsCount,
     shouldShowBadge,
     isLoadingPartnerRequests,
     handleTabClick,
-    handleOpenRVToolsModal,
   };
 };

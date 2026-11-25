@@ -19,15 +19,7 @@ import {
   RhUiColumnsIcon,
   RhUiEllipsisVerticalIcon,
 } from "@patternfly/react-icons";
-import {
-  ExpandableRowContent,
-  Table,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from "@patternfly/react-table";
+import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -74,9 +66,9 @@ import {
 } from "./Columns";
 import { DiscoveryAppliancesEmptyState } from "./DiscoveryAppliancesEmptyState";
 import { DiscoveryAppliancesErrorLoadingState } from "./DiscoveryAppliancesErrorLoadingState";
-import { SourceAssessmentsCard } from "./SourceAssessmentsCard";
 import { UploadInventoryAction } from "./UploadInventoryAction";
 import { getAgentVersionDisplayLabel, VersionStatus } from "./VersionStatus";
+import { useModals } from "../../assessment/view-models/ModalsContext";
 
 const VISIBLE_COLUMNS_STORAGE_KEY =
   "migration-advisor:discovery-appliances-visible-columns";
@@ -126,7 +118,6 @@ type SourceTableProps = {
   uploadOnly?: boolean;
   onEditEnvironment?: (sourceId: string) => void;
   onAddEnvironment?: () => void;
-  onCreateAssessment?: (sourceId?: string) => void;
   onDownloadOva?: (sourceId: string) => void;
 };
 
@@ -135,14 +126,11 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
   uploadOnly = false,
   onEditEnvironment,
   onAddEnvironment,
-  onCreateAssessment,
   onDownloadOva,
 }) => {
   const vm = useEnvironmentPage();
   const navigate = useNavigate();
-  const [expandedSourceIds, setExpandedSourceIds] = useState<
-    Record<string, boolean>
-  >({});
+  const assessmentVm = useModals();
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>(
     {},
   );
@@ -425,37 +413,6 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
     });
   };
 
-  const handleCreateAssessment = (sourceId?: string): void => {
-    onCreateAssessment?.(sourceId);
-  };
-
-  const findAssessment = (assessmentId: string): AssessmentModel | undefined =>
-    vm.assessments.find((assessment) => assessment.id === assessmentId);
-
-  const handleShareAssessment = (assessmentId: string): void => {
-    const assessment = findAssessment(assessmentId);
-    if (assessment) {
-      setSelectedAssessment(assessment);
-      setIsSharingModalOpen(true);
-    }
-  };
-
-  const handleUnshareAssessment = (assessmentId: string): void => {
-    const assessment = findAssessment(assessmentId);
-    if (assessment) {
-      setSelectedAssessment(assessment);
-      setIsUnsharingModalOpen(true);
-    }
-  };
-
-  const handleDeleteAssessment = (assessmentId: string): void => {
-    const assessment = findAssessment(assessmentId);
-    if (assessment) {
-      setSelectedAssessment(assessment);
-      setIsDeleteAssessmentModalOpen(true);
-    }
-  };
-
   const closeAssessmentActionModals = (): void => {
     setSelectedAssessment(null);
     setIsSharingModalOpen(false);
@@ -490,16 +447,6 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
       </>
     );
   }
-
-  const isSourceExpanded = (sourceId: string): boolean =>
-    expandedSourceIds[sourceId] ?? false;
-
-  const toggleSourceExpanded = (sourceId: string): void => {
-    setExpandedSourceIds((prev) => ({
-      ...prev,
-      [sourceId]: !prev[sourceId],
-    }));
-  };
 
   const showNoResultFound = hasSources && filteredSources.length === 0;
 
@@ -547,11 +494,13 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
             </ToolbarItem>
           ) : null}
 
-          {hasSources && onCreateAssessment ? (
+          {hasSources ? (
             <ToolbarItem>
               <Button
                 variant="secondary"
-                onClick={() => onCreateAssessment?.()}
+                onClick={() =>
+                  assessmentVm.openCreateApplianceAssessmentModal()
+                }
               >
                 Create assessment
               </Button>
@@ -572,7 +521,6 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
         >
           <Thead>
             <Tr>
-              <Th modifier="fitContent" screenReaderText="Expand assessments" />
               {isColumnVisible("Name") && (
                 <Th
                   className={tableHeaderNormal}
@@ -582,9 +530,6 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
                   {Columns.Name}
                 </Th>
               )}
-              <Th className={tableHeaderNormal} modifier="nowrap">
-                {Columns.Assessments}
-              </Th>
               {isColumnVisible("Status") && (
                 <Th
                   className={tableHeaderNormal}
@@ -663,6 +608,9 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
                   />
                 </Th>
               )}
+              <Th className={tableHeaderNormal} modifier="nowrap">
+                {Columns.Assessments}
+              </Th>
               {isColumnVisible("Actions") && (
                 <Th modifier="fitContent" screenReaderText="Actions">
                   {Columns.Actions}
@@ -682,41 +630,17 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
           {filteredSources.map((source, rowIndex) => {
             const agent = source.agent;
             const isUploadAllowed = !source.agent || source.onPremises;
-            const isExpanded = isSourceExpanded(source.id);
             const assessmentCount = vm.getAssessmentsForSource(
               source.id,
             ).length;
             return (
-              <Tbody key={source.id} isExpanded={isExpanded}>
-                <Tr isContentExpanded={isExpanded}>
-                  <Td
-                    expand={{
-                      rowIndex,
-                      isExpanded,
-                      onToggle: () => toggleSourceExpanded(source.id),
-                      expandId: `source-assessments-${source.id}`,
-                    }}
-                  />
+              <Tbody key={source.id}>
+                <Tr>
                   {isColumnVisible("Name") && (
                     <Td dataLabel={Columns.Name} className={tableCellTop}>
                       {source.name}
                     </Td>
                   )}
-                  <Td dataLabel={Columns.Assessments} className={tableCellTop}>
-                    <Button
-                      variant="link"
-                      isInline
-                      aria-expanded={isExpanded}
-                      aria-label={
-                        isExpanded
-                          ? `Hide assessments for ${source.name}`
-                          : `Show assessments for ${source.name}`
-                      }
-                      onClick={() => toggleSourceExpanded(source.id)}
-                    >
-                      {assessmentCount}
-                    </Button>
-                  </Td>
                   {isColumnVisible("Status") && (
                     <Td dataLabel={Columns.Status} className={tableCellTop}>
                       <AgentStatusView
@@ -799,6 +723,20 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
                       />
                     </Td>
                   )}
+                  <Td dataLabel={Columns.Assessments} className={tableCellTop}>
+                    <Button
+                      variant="link"
+                      isInline
+                      aria-label={`Show assessments for ${source.name}`}
+                      onClick={() =>
+                        void navigate(routes.assessments, {
+                          state: { selectedSources: [source.id] },
+                        })
+                      }
+                    >
+                      {assessmentCount}
+                    </Button>
+                  </Td>
                   {isColumnVisible("Actions") && (
                     <Td dataLabel={Columns.Actions} modifier="fitContent">
                       {uploadOnly ? (
@@ -837,19 +775,19 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
                           )}
                         >
                           <DropdownList>
-                            {onCreateAssessment ? (
-                              <DropdownItem
-                                onClick={() => {
-                                  setOpenDropdowns((prev) => ({
-                                    ...prev,
-                                    [source.id]: false,
-                                  }));
-                                  handleCreateAssessment(source.id);
-                                }}
-                              >
-                                Create assessment
-                              </DropdownItem>
-                            ) : null}
+                            <DropdownItem
+                              onClick={() => {
+                                setOpenDropdowns((prev) => ({
+                                  ...prev,
+                                  [source.id]: false,
+                                }));
+                                assessmentVm.openCreateApplianceAssessmentModal(
+                                  source.id,
+                                );
+                              }}
+                            >
+                              Create assessment
+                            </DropdownItem>
                             <DropdownItem
                               isDisabled={!onDownloadOva}
                               onClick={() => {
@@ -898,21 +836,6 @@ export const SourcesTable: React.FC<SourceTableProps> = ({
                       )}
                     </Td>
                   )}
-                </Tr>
-                <Tr isExpanded={isExpanded}>
-                  <Td colSpan={tableColumnCount}>
-                    <ExpandableRowContent hasNoBackground>
-                      <SourceAssessmentsCard
-                        source={source}
-                        onCreateAssessment={() =>
-                          handleCreateAssessment(source.id)
-                        }
-                        onDeleteAssessment={handleDeleteAssessment}
-                        onShareAssessment={handleShareAssessment}
-                        onUnshareAssessment={handleUnshareAssessment}
-                      />
-                    </ExpandableRowContent>
-                  </Td>
                 </Tr>
               </Tbody>
             );

@@ -105,12 +105,12 @@ export const COLUMN_MANAGEMENT_METADATA: Record<
   },
   Networks: {
     title: Columns.Networks,
-    isShownByDefault: true,
+    isShownByDefault: false,
     isUntoggleable: false,
   },
   Datastores: {
     title: Columns.Datastores,
-    isShownByDefault: true,
+    isShownByDefault: false,
     isUntoggleable: false,
   },
   SharingStatus: {
@@ -153,6 +153,7 @@ export type AssessmentTableRow = {
   id: string;
   name: string;
   source: string;
+  sourceId?: string;
   sourceType: string;
   dataCollectedMs?: number;
   importedMs?: number;

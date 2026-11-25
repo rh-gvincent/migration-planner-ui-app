@@ -8,7 +8,7 @@ These rules apply to **all new code** and should be enforced during code review.
 | Category           | Case                                     | Examples                                             |
 | ------------------ | ---------------------------------------- | ---------------------------------------------------- |
 | React components   | **PascalCase**                           | `Assessment.tsx`, `ConfirmationModal.tsx`            |
-| View-model hooks   | **camelCase** (starting with `use`)      | `useAssessmentPageViewModel.ts`                      |
+| View-model hooks   | **camelCase** (starting with `use`)      | `useAssessmentsScreenViewModel.ts`                   |
 | Stores             | **PascalCase**                           | `AssessmentsStore.ts`, `ReportStore.ts`              |
 | Store interfaces   | **PascalCase** (prefixed with `I`)       | `IAssessmentsStore.ts`                               |
 | Models & factories | **PascalCase**                           | `AssessmentModel.ts`, `SnapshotParser.ts`            |
@@ -37,9 +37,9 @@ Files whose name starts with `use` follow **camelCase**, not PascalCase.
 The `use` prefix signals a React hook and the rest of the name is camelCase:
 
 ```
-useAssessmentPageViewModel.ts   ✓  (camelCase)
-UseAssessmentPageViewModel.ts   ✗  (PascalCase — wrong)
-use-assessment-page.ts          ✗  (kebab-case — wrong)
+useAssessmentsScreenViewModel.ts   ✓  (camelCase)
+UseAssessmentsScreenViewModel.ts   ✗  (PascalCase — wrong)
+use-assessments-screen.ts          ✗  (kebab-case — wrong)
 ```
 
 ## Directories

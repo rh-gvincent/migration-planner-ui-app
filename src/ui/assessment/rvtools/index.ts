@@ -9,6 +9,8 @@ export {
   formatRvtoolsBackendErrorMessage,
   formatRvtoolsFileSize,
 } from "./formatters";
+export type { MultipleFilesInputFormGroupProps } from "./MultipleFilesInputFormGroup";
+export { MultipleFilesInputFormGroup } from "./MultipleFilesInputFormGroup";
 export type { RvtoolsFilesFieldProps } from "./RvtoolsFilesField";
 export { RvtoolsFilesField } from "./RvtoolsFilesField";
 export type {

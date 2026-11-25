@@ -50,7 +50,7 @@ export const HomeScreen: React.FC = () => {
       </Tabs>
 
       <TabContent id="home-screen-content">
-        <Outlet context={{ rvtoolsOpenToken: vm.rvtoolsOpenToken }} />
+        <Outlet />
       </TabContent>
     </AppPage>
   );

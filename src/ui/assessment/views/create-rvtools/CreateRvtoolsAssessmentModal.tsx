@@ -1,10 +1,12 @@
-import { css } from "@emotion/css";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { TextInputFormGroup } from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
   Button,
   Checkbox,
   Form,
   FormGroup,
+  FormHelperText,
   HelperText,
   HelperTextItem,
   Modal,
@@ -13,284 +15,218 @@ import {
   ModalHeader,
   Stack,
   StackItem,
-  TextInput,
 } from "@patternfly/react-core";
 import { RhUiExternalLinkIcon } from "@patternfly/react-icons";
 import React from "react";
+import { Controller, FormProvider, useForm } from "react-hook-form";
+import * as yup from "yup";
 
-import type { RvtoolsUploadState } from "../../../../data/stores/JobsStore";
-import { isNameError } from "../../../../lib/common/ErrorParser";
+import { MultipleFilesInputFormGroup } from "../../rvtools/MultipleFilesInputFormGroup";
+import type { RvtoolsFileValidationResult } from "../../rvtools/types";
 import {
-  RVTOOLS_APPEND_ALL_FAILED_MODAL_MESSAGE,
-  RVTOOLS_APPEND_ALL_FAILED_MODAL_TITLE,
-} from "../../helpers/rvtoolsUploadOutcome";
-import { RVTOOLS_DATA_SHARING_URL, RvtoolsFilesField } from "../../rvtools";
-import {
-  type CreateRvtoolsAssessmentModalMode,
-  useCreateRvtoolsAssessmentViewModel,
-} from "../../view-models/useCreateRvtoolsAssessmentViewModel";
+  MAX_RVTOOLS_FILES,
+  RVTOOLS_ACCEPT,
+  RVTOOLS_DATA_SHARING_URL,
+  RVTOOLS_MAX_FILE_BYTES,
+} from "../../rvtools/constants";
+import { isAllowedRvtoolsExtension } from "../../rvtools/validation";
+import type { CreateRvtoolsAssessmentFormValues } from "./types";
 
 export interface CreateRvtoolsAssessmentModalProps {
-  mode: CreateRvtoolsAssessmentModalMode;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (payload: { name: string; files: File[] }) => void;
+  onSubmit?: (payload: CreateRvtoolsAssessmentFormValues) => void;
   onClearError?: () => void;
-  onClearRvtoolsUpload?: () => void;
-  onStagedFileRemoved?: (file: { fileName: string; fileSize: number }) => void;
   isLoading?: boolean;
   error?: Error | null;
-  /** `true` while the job is actively processing (non-terminal status). */
-  isJobProcessing?: boolean;
-  jobProgressValue?: number;
-  jobError?: Error | null;
-  rvtoolsUpload?: RvtoolsUploadState;
-  resumePartialAssessmentId?: string;
-  onPartialAssessmentResolved?: () => void;
-  isNavigatingToReport?: boolean;
-  defaultAssessmentName?: string;
-  maxFiles?: number;
+  fileResults?: RvtoolsFileValidationResult[];
 }
 
-const isAbortError = (error: Error | null): boolean => {
-  if (!error) return false;
-  const message = error.message || "";
-  return (
-    (typeof (error as { name?: unknown }).name === "string" &&
-      (error as { name: string }).name === "AbortError") ||
-    (error instanceof DOMException &&
-      typeof error.message === "string" &&
-      /aborted/i.test(error.message)) ||
-    /aborted/i.test(message)
-  );
-};
+const FORM_ID = "create-rvtools-assessment-form";
+
+const validationSchema: yup.ObjectSchema<CreateRvtoolsAssessmentFormValues> =
+  yup.object({
+    name: yup.string().trim().required("Assessment name is required"),
+    consentChecked: yup
+      .boolean()
+      .required()
+      .oneOf([true], "Please agree to share aggregated data."),
+    files: yup
+      .array()
+      .of(yup.mixed<File>().required())
+      .required()
+      .min(1, "Select at least one RVTools file.")
+      .max(
+        MAX_RVTOOLS_FILES,
+        `You can upload up to ${MAX_RVTOOLS_FILES} files.`,
+      )
+      .test(
+        "rvtools-file-extension",
+        "Unsupported file format. Please select XLSX or XLS files.",
+        (files) =>
+          !files || files.every((file) => isAllowedRvtoolsExtension(file.name)),
+      )
+      .test(
+        "rvtools-file-size",
+        `Each file must be no larger than ${Math.round(RVTOOLS_MAX_FILE_BYTES / (1024 * 1024))} MiB.`,
+        (files) =>
+          !files || files.every((file) => file.size <= RVTOOLS_MAX_FILE_BYTES),
+      ),
+  });
 
 export const CreateRvtoolsAssessmentModal: React.FC<
   CreateRvtoolsAssessmentModalProps
 > = ({
-  mode,
   isOpen,
   onClose,
   onSubmit,
   onClearError,
-  onClearRvtoolsUpload,
-  onStagedFileRemoved,
   isLoading = false,
   error = null,
-  isJobProcessing = false,
-  jobProgressValue = 0,
-  jobError = null,
-  rvtoolsUpload,
-  resumePartialAssessmentId,
-  onPartialAssessmentResolved,
-  isNavigatingToReport = false,
-  defaultAssessmentName = "",
-  maxFiles,
+  fileResults = [],
 }) => {
-  const isFormDisabled = isLoading || isJobProcessing || isNavigatingToReport;
-
-  const vm = useCreateRvtoolsAssessmentViewModel({
-    mode,
-    isOpen,
-    isFormDisabled,
-    onClearError,
-    onClearRvtoolsUpload,
-    onStagedFileRemoved,
-    resumePartialAssessmentId,
-    onPartialAssessmentResolved,
-    maxFiles,
-    rvtoolsUpload,
-    defaultAssessmentName,
-    isLoading,
-    isJobProcessing,
-    isNavigatingToReport,
-    jobProgressValue,
+  const methods = useForm<CreateRvtoolsAssessmentFormValues>({
+    resolver: yupResolver(validationSchema),
+    mode: "onTouched",
+    defaultValues: {
+      name: "",
+      consentChecked: false,
+      files: [],
+    },
   });
+  const {
+    control,
+    formState: { errors: formErrors },
+  } = methods;
 
-  const effectiveError = jobError || error;
-  const hasNameError = isNameError(effectiveError);
-  const hasGeneralApiError =
-    !!effectiveError &&
-    !isNameError(effectiveError) &&
-    !isAbortError(effectiveError);
-
-  const nameErrorToDisplay =
-    vm.nameValidationError || (hasNameError ? effectiveError?.message : "");
-
-  const handleClose = (): void => {
-    vm.resetForm();
-    onClearError?.();
-    onClose();
-  };
-
-  const handleSubmit = (): void => {
-    if (!vm.validateForm() || !vm.canSubmit) {
-      return;
-    }
-
-    onSubmit({
-      name: vm.assessmentName.trim(),
-      files: vm.getStagedFilesForSubmit(),
+  const handleFormSubmit = (
+    values: CreateRvtoolsAssessmentFormValues,
+  ): void => {
+    onSubmit?.({
+      name: values.name.trim(),
+      consentChecked: values.consentChecked,
+      files: values.files,
     });
   };
 
-  const showReviewApiError =
-    hasGeneralApiError && !vm.showReviewTable && !vm.canSubmit;
-
-  const isButtonDisabled =
-    !vm.canSubmit ||
-    isLoading ||
-    !!nameErrorToDisplay ||
-    !!vm.filePickerError ||
-    showReviewApiError ||
-    isJobProcessing ||
-    isNavigatingToReport;
-
-  const title =
-    mode === "append" ? "Add RVTools files" : "Create assessment from RVTools";
-
-  const showNoAssessmentCreatedAlert =
-    mode === "create" &&
-    vm.showReviewTable &&
-    vm.invalidFileCount > 0 &&
-    vm.validFileCount === 0 &&
-    !resumePartialAssessmentId &&
-    vm.allUploadResultsTerminal;
-
-  const showNoFilesAddedAlert =
-    mode === "append" &&
-    vm.showReviewTable &&
-    vm.invalidFileCount > 0 &&
-    vm.validFileCount === 0 &&
-    vm.allUploadResultsTerminal;
-
   return (
-    <Modal variant="medium" isOpen={isOpen} onClose={handleClose}>
-      <ModalHeader title={title} />
-      <ModalBody>
-        <Stack hasGutter>
-          {showNoFilesAddedAlert ? (
-            <StackItem>
-              <Alert
-                variant="danger"
-                isInline
-                title={RVTOOLS_APPEND_ALL_FAILED_MODAL_TITLE}
-              >
-                {RVTOOLS_APPEND_ALL_FAILED_MODAL_MESSAGE}
-              </Alert>
-            </StackItem>
-          ) : null}
-          {showNoAssessmentCreatedAlert ? (
-            <StackItem>
-              <Alert variant="danger" isInline title="No assessment created">
-                None of the files could be processed. Replace the files to
-                continue, or cancel to start a new upload.
-              </Alert>
-            </StackItem>
-          ) : null}
-          <StackItem>
-            <Form>
-              {mode === "create" && (
-                <FormGroup
-                  label="Assessment name"
-                  isRequired
-                  fieldId="rvtools-assessment-name"
+    <FormProvider<CreateRvtoolsAssessmentFormValues> {...methods}>
+      <Modal variant="medium" isOpen={isOpen} onClose={onClose}>
+        <ModalHeader title="Create assessment from RVTools" />
+        <ModalBody>
+          <Stack hasGutter>
+            {error && (
+              <StackItem>
+                <Alert
+                  variant="danger"
+                  isInline
+                  title="An error occurred while creating the assessment"
                 >
-                  <TextInput
-                    isRequired
-                    type="text"
-                    id="rvtools-assessment-name"
-                    name="rvtools-assessment-name"
-                    value={vm.assessmentName}
-                    onChange={(_event, value) => vm.setAssessmentName(value)}
-                    validated={nameErrorToDisplay ? "error" : "default"}
-                    placeholder="Enter assessment name"
-                    isDisabled={isFormDisabled}
+                  {error.message}
+                </Alert>
+              </StackItem>
+            )}
+            <StackItem>
+              <Form
+                id={FORM_ID}
+                noValidate
+                onSubmit={(event) => {
+                  void methods.handleSubmit(handleFormSubmit)(event);
+                }}
+              >
+                <TextInputFormGroup
+                  id="rvtools-assessment-name"
+                  name="name"
+                  label="Assessment name"
+                  placeholder="Enter assessment name"
+                  isRequired
+                  isDisabled={isLoading}
+                />
+
+                <MultipleFilesInputFormGroup
+                  id="rvtools-files"
+                  name="files"
+                  label="RVTools files (Excel)"
+                  isRequired
+                  isDisabled={isLoading}
+                  isActive={isOpen}
+                  accept={RVTOOLS_ACCEPT}
+                  maxFiles={MAX_RVTOOLS_FILES}
+                  fileResults={fileResults}
+                  onClearError={onClearError}
+                />
+
+                <FormGroup fieldId="rvtools-data-share-consent" isRequired>
+                  <Controller
+                    control={methods.control}
+                    name="consentChecked"
+                    render={({ field }) => (
+                      <Checkbox
+                        id="rvtools-data-share-consent"
+                        name={field.name}
+                        label={
+                          <>
+                            I agree to share aggregated data about my
+                            environment with Red Hat.{" "}
+                            <a
+                              href={RVTOOLS_DATA_SHARING_URL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Learn more <RhUiExternalLinkIcon />
+                            </a>
+                          </>
+                        }
+                        isChecked={field.value}
+                        onChange={(_event, checked) => field.onChange(checked)}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                        isDisabled={isLoading}
+                        aria-invalid={Boolean(formErrors.consentChecked)}
+                        aria-describedby={
+                          formErrors.consentChecked
+                            ? "rvtools-data-share-consent-error"
+                            : undefined
+                        }
+                      />
+                    )}
                   />
-                  {nameErrorToDisplay && (
-                    <HelperText>
-                      <HelperTextItem variant="error">
-                        {nameErrorToDisplay}
-                      </HelperTextItem>
-                    </HelperText>
+                  {formErrors.consentChecked?.message && (
+                    <FormHelperText id="rvtools-data-share-consent-error">
+                      <HelperText>
+                        <HelperTextItem variant="error">
+                          {formErrors.consentChecked.message}
+                        </HelperTextItem>
+                      </HelperText>
+                    </FormHelperText>
                   )}
                 </FormGroup>
-              )}
-
-              <RvtoolsFilesField
-                mode={mode}
-                isDisabled={isFormDisabled}
-                stagedFiles={vm.stagedFiles}
-                filePickerError={vm.filePickerError}
-                showReviewTable={vm.showReviewTable}
-                onAddFiles={vm.addFiles}
-                onRemoveFile={vm.removeFile}
-                onReplaceFile={vm.replaceFile}
-                fieldId="rvtools-files"
-                maxFiles={maxFiles}
-              />
-
-              {mode === "create" ? (
-                <Checkbox
-                  id="rvtools-data-share-consent"
-                  label={
-                    <>
-                      I agree to share aggregated data about my environment with
-                      Red Hat.{" "}
-                      <a
-                        href={RVTOOLS_DATA_SHARING_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Learn more <RhUiExternalLinkIcon />
-                      </a>
-                    </>
-                  }
-                  isChecked={vm.consentChecked}
-                  onChange={(_event, checked) => {
-                    vm.setConsentChecked(Boolean(checked));
-                  }}
-                  isRequired
-                  isDisabled={isFormDisabled}
-                />
-              ) : null}
-            </Form>
-          </StackItem>
-          {showReviewApiError ? (
-            <StackItem>
-              <Alert
-                variant="danger"
-                title="Failed to create assessment"
-                className={css({ whiteSpace: "pre-line" })}
-                isInline
-              >
-                {effectiveError?.message ||
-                  "An error occurred while creating the assessment"}
-              </Alert>
+              </Form>
             </StackItem>
-          ) : null}
-        </Stack>
-      </ModalBody>
-      <ModalFooter>
-        <Button
-          key="create"
-          variant="primary"
-          onClick={handleSubmit}
-          isDisabled={isButtonDisabled}
-          isLoading={isLoading || isJobProcessing || isNavigatingToReport}
-        >
-          {vm.primaryButtonLabel}
-        </Button>
-        <Button
-          key="cancel"
-          variant="link"
-          onClick={handleClose}
-          isDisabled={isNavigatingToReport}
-        >
-          Cancel
-        </Button>
-      </ModalFooter>
-    </Modal>
+          </Stack>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            key="create"
+            variant="primary"
+            type="submit"
+            form={FORM_ID}
+            isDisabled={isLoading || !methods.formState.isValid}
+            isLoading={isLoading}
+          >
+            Create assessment
+          </Button>
+          <Button
+            key="cancel"
+            variant="link"
+            onClick={onClose}
+            isDisabled={isLoading}
+          >
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </FormProvider>
   );
 };
 

@@ -7,14 +7,9 @@ import {
   type MenuToggleElement,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useModals } from "../../assessment/view-models/ModalsContext";
 
-import { routes } from "../../../routing/Routes";
-
-type Props = {
-  toggleLabel?: string;
-  onSelectRvtools: () => void;
-} & Omit<
+type CreateAssessmentDropdownProps = Omit<
   DropdownProps,
   | "isOpen"
   | "onOpenChange"
@@ -23,13 +18,14 @@ type Props = {
   | "children"
 >;
 
-const CreateAssessmentDropdown: React.FC<Props> = ({
-  toggleLabel = "Create",
-  onSelectRvtools,
+const CreateAssessmentDropdown: React.FC<CreateAssessmentDropdownProps> = ({
   ...props
 }) => {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const {
+    openCreateApplianceAssessmentModal,
+    openCreateRVtoolAssessmentModal,
+  } = useModals();
 
   return (
     <Dropdown
@@ -43,30 +39,31 @@ const CreateAssessmentDropdown: React.FC<Props> = ({
           onClick={() => setIsOpen((prev) => !prev)}
           isExpanded={isOpen}
         >
-          {toggleLabel}
+          Create assessment
         </MenuToggle>
       )}
       shouldFocusToggleOnSelect
     >
       <DropdownList>
         <DropdownItem
-          key="agent"
-          component="button"
-          onClick={() => {
-            void navigate(routes.assessmentCreate);
-          }}
-        >
-          With discovery OVA
-        </DropdownItem>
-        <DropdownItem
           key="rvtools"
           component="button"
           onClick={() => {
             setIsOpen(false);
-            onSelectRvtools();
+            openCreateRVtoolAssessmentModal();
           }}
         >
-          From RVTools (XLS/XLSX)
+          From an RVTools file
+        </DropdownItem>
+        <DropdownItem
+          key="agent"
+          component="button"
+          onClick={() => {
+            setIsOpen(false);
+            openCreateApplianceAssessmentModal();
+          }}
+        >
+          From a discovery appliance
         </DropdownItem>
       </DropdownList>
     </Dropdown>

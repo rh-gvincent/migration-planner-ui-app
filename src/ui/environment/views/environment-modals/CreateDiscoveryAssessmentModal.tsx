@@ -2,6 +2,9 @@ import { css } from "@emotion/css";
 import {
   Alert,
   Button,
+  ButtonVariant,
+  Content,
+  ContentVariants,
   type DropEvent,
   FileUpload,
   Form,
@@ -20,12 +23,14 @@ import {
   StackItem,
   TextInput,
 } from "@patternfly/react-core";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 
 import type { SourceModel } from "../../../../models/SourceModel";
 import { useCreateDiscoveryAssessmentViewModel } from "../../view-models/useCreateDiscoveryAssessmentViewModel";
+import { useNavigate } from "react-router-dom";
+import { routes } from "../../../../routing/Routes";
 
-export type CreateDiscoveryAssessmentModalProps = {
+type CreateDiscoveryAssessmentModalProps = {
   isOpen: boolean;
   onClose: () => void;
   sources: SourceModel[];
@@ -33,35 +38,16 @@ export type CreateDiscoveryAssessmentModalProps = {
   onInventoryUploaded?: () => void | Promise<void>;
 };
 
-const radioDescriptionStyle = css`
-  margin-top: 4px;
-  margin-left: 26px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: var(--pf-t--global--text--color--subtle);
-`;
-
-const introStyle = css`
-  margin-bottom: var(--pf-t--global--spacer--md);
-`;
-
-type CreateDiscoveryAssessmentModalContentProps = {
-  sources: SourceModel[];
-  preselectedSourceId?: string;
-  onClose: () => void;
-  onInventoryUploaded?: () => void | Promise<void>;
-  onSubmittingChange: (isSubmitting: boolean) => void;
-};
-
-const CreateDiscoveryAssessmentModalContent: React.FC<
-  CreateDiscoveryAssessmentModalContentProps
+const CreateDiscoveryAssessmentModal: React.FC<
+  CreateDiscoveryAssessmentModalProps
 > = ({
+  isOpen,
+  onClose,
   sources,
   preselectedSourceId,
-  onClose,
   onInventoryUploaded,
-  onSubmittingChange,
 }) => {
+  const navigate = useNavigate();
   const vm = useCreateDiscoveryAssessmentViewModel({
     isOpen: true,
     sources,
@@ -69,10 +55,6 @@ const CreateDiscoveryAssessmentModalContent: React.FC<
     onClose,
     onInventoryUploaded,
   });
-
-  useEffect(() => {
-    onSubmittingChange(vm.isSubmitting);
-  }, [onSubmittingChange, vm.isSubmitting]);
 
   const nameErrorToDisplay =
     vm.nameValidationError ||
@@ -103,181 +85,194 @@ const CreateDiscoveryAssessmentModalContent: React.FC<
   };
 
   return (
-    <>
+    <Modal variant="medium" isOpen={isOpen} onClose={onClose}>
       <ModalHeader
-        title="Create assessment"
+        title="Create assessment from discovery appliance"
         labelId="create-discovery-assessment-modal-title"
       />
       <ModalBody>
-        <p className={introStyle}>
-          Choose how you want to collect inventory from a discovery appliance,
-          then complete the details below.
-        </p>
-        <Form id="discovery-assessment-form" onSubmit={handleFormSubmit}>
-          <FormGroup
-            label="Data source"
-            isRequired
-            fieldId="discovery-assessment-data-source"
-            role="group"
-          >
-            <Stack hasGutter>
-              <StackItem>
-                <Radio
-                  id="discovery-assessment-data-source-connected"
-                  name="discovery-assessment-data-source"
-                  label="Connected discovery appliance"
-                  isChecked={vm.dataSource === "connected"}
-                  onChange={() => {
-                    vm.setDataSource("connected");
-                    vm.clearApiError();
-                  }}
-                  isDisabled={vm.isSubmitting}
-                />
-                <div
-                  className={radioDescriptionStyle}
-                  data-testid="connected-data-source-description"
-                >
-                  Pull live inventory from a discovery appliance that has shared
-                  its data with Red Hat. Recommended for continuous analysis.
-                </div>
-              </StackItem>
-              <StackItem>
-                <Radio
-                  id="discovery-assessment-data-source-upload"
-                  name="discovery-assessment-data-source"
-                  label="Upload file"
-                  isChecked={vm.dataSource === "upload"}
-                  onChange={() => {
-                    vm.setDataSource("upload");
-                    vm.clearApiError();
-                  }}
-                  isDisabled={vm.isSubmitting}
-                />
-                <div className={radioDescriptionStyle}>
-                  Upload a point-in-time discovery appliance export snapshot
-                  (.json or .zip).
-                </div>
-              </StackItem>
-            </Stack>
-          </FormGroup>
-
-          <FormGroup
-            label="Assessment name"
-            isRequired
-            fieldId="discovery-assessment-name"
-          >
-            <TextInput
-              isRequired
-              type="text"
-              id="discovery-assessment-name"
-              name="discovery-assessment-name"
-              value={vm.assessmentName}
-              onChange={(_event, value) => {
-                vm.setAssessmentName(value);
-                vm.clearApiError();
-              }}
-              validated={nameErrorToDisplay ? "error" : "default"}
-              isDisabled={vm.isSubmitting}
-            />
-            {nameErrorToDisplay ? (
-              <HelperText>
-                <HelperTextItem variant="error">
-                  {nameErrorToDisplay}
-                </HelperTextItem>
-              </HelperText>
-            ) : null}
-          </FormGroup>
-
-          <FormGroup
-            label="Associate discovery appliance"
-            isRequired
-            fieldId="discovery-assessment-appliance"
-          >
-            <FormSelect
-              id="discovery-assessment-appliance"
-              value={vm.selectedSourceId}
-              onChange={(_event, value) => {
-                vm.setSelectedSourceId(value);
-                vm.clearApiError();
-              }}
-              validated={vm.sourceValidationError ? "error" : "default"}
-              isDisabled={vm.isSubmitting}
-            >
-              <FormSelectOption value="" label="Select a discovery appliance" />
-              {vm.applianceOptions.map((source) => (
-                <FormSelectOption
-                  key={source.id}
-                  value={source.id}
-                  label={source.name || source.id}
-                />
-              ))}
-            </FormSelect>
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {vm.associateApplianceHelperText}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-            {vm.sourceValidationError ? (
-              <HelperText>
-                <HelperTextItem variant="error">
-                  {vm.sourceValidationError}
-                </HelperTextItem>
-              </HelperText>
-            ) : null}
-            {vm.isConnectedSourceNotReady && !vm.sourceValidationError ? (
-              <HelperText>
-                <HelperTextItem variant="warning">
-                  This discovery appliance does not have inventory ready yet.
-                </HelperTextItem>
-              </HelperText>
-            ) : null}
-          </FormGroup>
-
-          {vm.dataSource === "upload" ? (
-            <FormGroup
-              label="Inventory file"
-              isRequired
-              fieldId="discovery-assessment-inventory-file"
-            >
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    Accepts .json or .zip files up to 50 MiB.
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-              <FileUpload
-                id="discovery-assessment-inventory-file"
-                value={vm.selectedFile ?? undefined}
-                filename={vm.inventoryFilename}
-                filenamePlaceholder="Drag and drop a file or select one"
-                onFileInputChange={handleFileInputChange}
-                onClearClick={() => {
-                  vm.clearSelectedFile();
-                  vm.clearApiError();
+        <Stack hasGutter>
+          <StackItem>
+            <Content component={ContentVariants.p}>
+              Select how you want to collect inventory from a discovery
+              appliance, then complete the details below. Don't have a discovery
+              appliance? Manage or create one in{" "}
+              <Button
+                isInline
+                variant={ButtonVariant.link}
+                onClick={() => {
+                  navigate(routes.environments);
+                  onClose();
                 }}
-                allowEditingUploadedText={false}
-                browseButtonText="Upload"
-                clearButtonText="Clear"
-                validated={vm.fileValidationError ? "error" : "default"}
-                accept=".json,.zip"
-                hideDefaultPreview
-                isDisabled={vm.isSubmitting}
-              />
-              {vm.fileValidationError ? (
-                <FormHelperText>
+              >
+                Discovery appliances
+              </Button>
+              .
+            </Content>
+          </StackItem>
+          <StackItem>
+            <Form id="discovery-assessment-form" onSubmit={handleFormSubmit}>
+              <FormGroup
+                label="Data source"
+                isRequired
+                fieldId="discovery-assessment-data-source"
+                role="group"
+              >
+                <Stack hasGutter>
+                  <StackItem>
+                    <Radio
+                      id="discovery-assessment-data-source-connected"
+                      name="discovery-assessment-data-source"
+                      label="Connected discovery appliance"
+                      isChecked={vm.dataSource === "connected"}
+                      onChange={() => {
+                        vm.setDataSource("connected");
+                        vm.clearApiError();
+                      }}
+                      isDisabled={vm.isSubmitting}
+                      description="Pull live inventory from a discovery appliance that has shared its data with Red Hat. Recommended for continuous analysis."
+                    />
+                  </StackItem>
+                  <StackItem>
+                    <Radio
+                      id="discovery-assessment-data-source-upload"
+                      name="discovery-assessment-data-source"
+                      label="Upload file"
+                      isChecked={vm.dataSource === "upload"}
+                      onChange={() => {
+                        vm.setDataSource("upload");
+                        vm.clearApiError();
+                      }}
+                      isDisabled={vm.isSubmitting}
+                      description="Upload a point-in-time discovery appliance export snapshot (.json or .zip)."
+                    />
+                  </StackItem>
+                </Stack>
+              </FormGroup>
+
+              <FormGroup
+                label="Assessment name"
+                isRequired
+                fieldId="discovery-assessment-name"
+              >
+                <TextInput
+                  isRequired
+                  type="text"
+                  id="discovery-assessment-name"
+                  name="discovery-assessment-name"
+                  value={vm.assessmentName}
+                  onChange={(_event, value) => {
+                    vm.setAssessmentName(value);
+                    vm.clearApiError();
+                  }}
+                  validated={nameErrorToDisplay ? "error" : "default"}
+                  isDisabled={vm.isSubmitting}
+                />
+                {nameErrorToDisplay ? (
                   <HelperText>
                     <HelperTextItem variant="error">
-                      {vm.fileValidationError}
+                      {nameErrorToDisplay}
+                    </HelperTextItem>
+                  </HelperText>
+                ) : null}
+              </FormGroup>
+
+              <FormGroup
+                label="Associate discovery appliance"
+                isRequired
+                fieldId="discovery-assessment-appliance"
+              >
+                <FormSelect
+                  id="discovery-assessment-appliance"
+                  value={vm.selectedSourceId}
+                  onChange={(_event, value) => {
+                    vm.setSelectedSourceId(value);
+                    vm.clearApiError();
+                  }}
+                  validated={vm.sourceValidationError ? "error" : "default"}
+                  isDisabled={vm.isSubmitting}
+                >
+                  <FormSelectOption
+                    value=""
+                    label="Select a discovery appliance"
+                  />
+                  {vm.applianceOptions.map((source) => (
+                    <FormSelectOption
+                      key={source.id}
+                      value={source.id}
+                      label={source.name || source.id}
+                    />
+                  ))}
+                </FormSelect>
+                <FormHelperText>
+                  <HelperText>
+                    <HelperTextItem>
+                      {vm.associateApplianceHelperText}
                     </HelperTextItem>
                   </HelperText>
                 </FormHelperText>
+                {vm.sourceValidationError ? (
+                  <HelperText>
+                    <HelperTextItem variant="error">
+                      {vm.sourceValidationError}
+                    </HelperTextItem>
+                  </HelperText>
+                ) : null}
+                {vm.isConnectedSourceNotReady && !vm.sourceValidationError ? (
+                  <HelperText>
+                    <HelperTextItem variant="warning">
+                      This discovery appliance does not have inventory ready
+                      yet.
+                    </HelperTextItem>
+                  </HelperText>
+                ) : null}
+              </FormGroup>
+
+              {vm.dataSource === "upload" ? (
+                <FormGroup
+                  label="Inventory file"
+                  isRequired
+                  fieldId="discovery-assessment-inventory-file"
+                >
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        Accepts .json or .zip files up to 50 MiB.
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                  <FileUpload
+                    id="discovery-assessment-inventory-file"
+                    value={vm.selectedFile ?? undefined}
+                    filename={vm.inventoryFilename}
+                    filenamePlaceholder="Drag and drop a file or select one"
+                    onFileInputChange={handleFileInputChange}
+                    onClearClick={() => {
+                      vm.clearSelectedFile();
+                      vm.clearApiError();
+                    }}
+                    allowEditingUploadedText={false}
+                    browseButtonText="Upload"
+                    clearButtonText="Clear"
+                    validated={vm.fileValidationError ? "error" : "default"}
+                    accept=".json,.zip"
+                    hideDefaultPreview
+                    isDisabled={vm.isSubmitting}
+                  />
+                  {vm.fileValidationError ? (
+                    <FormHelperText>
+                      <HelperText>
+                        <HelperTextItem variant="error">
+                          {vm.fileValidationError}
+                        </HelperTextItem>
+                      </HelperText>
+                    </FormHelperText>
+                  ) : null}
+                </FormGroup>
               ) : null}
-            </FormGroup>
-          ) : null}
-        </Form>
+            </Form>
+          </StackItem>
+        </Stack>
 
         {vm.hasGeneralApiError && vm.apiError ? (
           <Alert
@@ -315,46 +310,10 @@ const CreateDiscoveryAssessmentModalContent: React.FC<
           Cancel
         </Button>
       </ModalFooter>
-    </>
-  );
-};
-
-CreateDiscoveryAssessmentModalContent.displayName =
-  "CreateDiscoveryAssessmentModalContent";
-
-export const CreateDiscoveryAssessmentModal: React.FC<
-  CreateDiscoveryAssessmentModalProps
-> = ({
-  isOpen,
-  onClose,
-  sources,
-  preselectedSourceId,
-  onInventoryUploaded,
-}) => {
-  const isSubmittingRef = useRef(false);
-
-  const handleModalClose = (): void => {
-    if (isSubmittingRef.current) {
-      return;
-    }
-    onClose();
-  };
-
-  return (
-    <Modal variant="medium" isOpen={isOpen} onClose={handleModalClose}>
-      {isOpen ? (
-        <CreateDiscoveryAssessmentModalContent
-          sources={sources}
-          preselectedSourceId={preselectedSourceId}
-          onClose={onClose}
-          onInventoryUploaded={onInventoryUploaded}
-          onSubmittingChange={(isSubmitting) => {
-            isSubmittingRef.current = isSubmitting;
-          }}
-        />
-      ) : null}
     </Modal>
   );
 };
 
 CreateDiscoveryAssessmentModal.displayName = "CreateDiscoveryAssessmentModal";
+
+export default CreateDiscoveryAssessmentModal;
